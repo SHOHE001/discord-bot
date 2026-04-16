@@ -1,4 +1,4 @@
-import { readdirSync } from "node:fs";
+import { readdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import type { Client } from "discord.js";
@@ -11,7 +11,8 @@ export async function loadPlugins(client: Client): Promise<Map<string, PluginCom
 
   let entries: string[];
   try {
-    entries = readdirSync(pluginsDir, { withFileTypes: true })
+    const dirents = await readdir(pluginsDir, { withFileTypes: true });
+    entries = dirents
       .filter((d) => d.isDirectory())
       .map((d) => d.name);
   } catch {
