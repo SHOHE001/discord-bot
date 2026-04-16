@@ -3,6 +3,14 @@
 プラグイン方式で機能を自由に追加できる Discord Bot。
 discord.js v14 + TypeScript 製。
 
+## 🚀 デプロイ状態
+
+**現在 Google Cloud Compute Engine で 24時間稼働中**
+- **プラットフォーム**: Google Cloud (e2-micro, Ubuntu 22.04 LTS)
+- **ランタイム**: Node.js v18.20.4
+- **プロセス管理**: PM2（自動起動対応）
+- **状態**: Online ✅
+
 ## 機能一覧
 
 | プラグイン | コマンド | 定期実行 |
@@ -43,6 +51,58 @@ cp .env.example .env
 ```bash
 npm run dev
 ```
+
+---
+
+## デプロイ（Google Cloud）
+
+### ローカル開発 → VM へのデプロイ
+
+#### ローカル側: コード修正・push
+
+```bash
+cd discord-bot
+# コード修正
+git add .
+git commit -m "機能追加: ○○"
+git push origin main
+```
+
+#### VM 側: pull & 再起動
+
+Google Cloud Web SSH で接続:
+
+```bash
+cd ~/discord-bot
+git pull origin main
+npm install  # 依存関係が変わった場合のみ
+pm2 restart discord-bot
+
+# ログ確認
+pm2 logs discord-bot
+```
+
+#### ワンライナー版
+
+```bash
+cd ~/discord-bot && git pull && npm install && pm2 restart discord-bot && pm2 logs discord-bot
+```
+
+### デプロイスクリプト（VM に配置済み）
+
+```bash
+bash ~/deploy.sh
+```
+
+### トラブルシューティング
+
+| 問題 | 対応 |
+|------|------|
+| Bot が offline | `pm2 restart discord-bot` |
+| ログが見えない | `pm2 logs discord-bot` |
+| 変更が反映されない | `git status` → `git pull` → `pm2 restart` |
+
+詳細は `.company/secretary/notes/discord-bot-deploy.md` を参照。
 
 ---
 
