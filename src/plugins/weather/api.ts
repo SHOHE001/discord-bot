@@ -1,5 +1,7 @@
 const OWM_BASE = "https://api.openweathermap.org/data/2.5/weather";
 
+export const DEFAULT_CITY = process.env.CITY ?? "Tokyo";
+
 export interface WeatherData {
   cityName: string;
   temp: number;

@@ -1,10 +1,10 @@
 import { EmbedBuilder, TextChannel } from "discord.js";
 import type { Client } from "discord.js";
-import { fetchWeather, iconUrl, embedColor } from "./api.js";
+import { fetchWeather, iconUrl, embedColor, DEFAULT_CITY } from "./api.js";
 
 export async function postDailyWeather(client: Client): Promise<void> {
   const channelId = process.env.WEATHER_CHANNEL_ID;
-  const city = process.env.CITY ?? "Tokyo";
+  const city = DEFAULT_CITY;
 
   if (!channelId) {
     console.warn("[weather/cron] WEATHER_CHANNEL_ID が設定されていません");

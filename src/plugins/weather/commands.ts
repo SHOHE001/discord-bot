@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
-import { fetchWeather, iconUrl, embedColor } from "./api.js";
+import { fetchWeather, iconUrl, embedColor, DEFAULT_CITY } from "./api.js";
 import type { PluginCommand } from "../../core/types.js";
 
 export const weatherCommand: PluginCommand = {
@@ -14,7 +14,7 @@ export const weatherCommand: PluginCommand = {
     ),
 
   async execute(interaction) {
-    const city = interaction.options.getString("city") ?? process.env.CITY ?? "Tokyo";
+    const city = interaction.options.getString("city") ?? DEFAULT_CITY;
 
     await interaction.deferReply();
 
