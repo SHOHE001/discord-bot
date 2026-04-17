@@ -116,7 +116,8 @@ discord-bot/
 │   │
 │   ├── core/
 │   │   ├── types.ts          # プラグインのインターフェース定義
-│   │   └── plugin-loader.ts  # src/plugins/ を自動スキャンして登録
+│   │   ├── plugin-loader.ts  # src/plugins/ を自動スキャンして登録
+│   │   └── channel-manager.ts # プラグイン別チャンネルの自動作成・管理
 │   │
 │   └── plugins/              # ここにプラグインを追加していく
 │       └── weather/          # 天気プラグイン（実装例）
@@ -140,12 +141,27 @@ discord-bot/
 src/plugins/ を全スキャン
   └─ 各フォルダの index.ts を動的 import
        └─ PluginDefinition を取得
-            ├─ commands   → スラッシュコマンドとして登録
-            ├─ cronJobs   → node-cron でスケジュール登録
-            └─ onReady    → Bot起動時に実行
+            ├─ commands      → スラッシュコマンドとして登録
+            ├─ cronJobs      → node-cron でスケジュール登録
+            ├─ onReady       → Bot起動時に実行
+            └─ channelName   → 指定した名前のチャンネルを自動作成
 ```
 
 **新しいプラグインを追加してもコアファイルの変更は不要。フォルダを追加して再起動するだけ。**
+
+### チャンネル自動作成の仕組み
+
+`channelName` を指定したプラグインは、Bot 起動時に `DISCORD_GUILD_ID` のサーバーへ自動でテキストチャンネルを作成する。
+すでに同名チャンネルが存在する場合はそのまま使用する（重複作成しない）。
+
+```
+Bot 起動（clientReady）
+  └─ channel-manager.ts が各プラグインの channelName を確認
+       ├─ チャンネルが存在する → そのまま使用
+       └─ チャンネルが存在しない → 自動作成 → channelId をキャッシュ
+```
+
+cronジョブやメッセージ送信時は `getPluginChannelId("plugin-name")` でチャンネルIDを取得できる。
 
 ---
 
@@ -186,6 +202,7 @@ src/plugins/[plugin-name]/
 ```typescript
 interface PluginDefinition {
   name: string;                    // プラグイン名（ログに表示）
+  channelName?: string;            // 自動作成するチャンネル名（任意）
   commands?: PluginCommand[];      // スラッシュコマンド（任意）
   cronJobs?: PluginCronJob[];      // 定期実行タスク（任意）
   onReady?: (client: Client) => Promise<void>;  // 起動時フック（任意）
@@ -212,6 +229,7 @@ import { myJob } from "./cron.js";
 
 const plugin: PluginDefinition = {
   name: "plugin-name",
+  channelName: "チャンネル名",  // Bot起動時に自動作成（省略可）
   commands: [myCommand],
   cronJobs: [
     {
@@ -296,9 +314,14 @@ await interaction.reply({ embeds: [embed] });
 
 **定期的にチャンネルへ投稿する（cron.ts）**
 
+`channelName` を設定していれば `getPluginChannelId` で自動取得できる。
+
 ```typescript
+import { getPluginChannelId } from "../../core/channel-manager.js";
+
 export async function myJob(client: Client): Promise<void> {
-  const channelId = process.env.SOME_CHANNEL_ID;
+  // channel-manager で自動作成されたチャンネルIDを取得
+  const channelId = getPluginChannelId("plugin-name");
   if (!channelId) return;
 
   const channel = await client.channels.fetch(channelId);
