@@ -4,9 +4,11 @@ import { pathToFileURL } from "node:url";
 import type { Client } from "discord.js";
 import cron from "node-cron";
 import type { PluginDefinition, PluginCommand } from "./types.js";
+import { setupPluginChannels } from "./channel-manager.js";
 
 export async function loadPlugins(client: Client): Promise<Map<string, PluginCommand>> {
   const commands = new Map<string, PluginCommand>();
+  const loadedPlugins: PluginDefinition[] = [];
   const pluginsDir = resolve(process.cwd(), "src/plugins");
 
   let entries: string[];
@@ -33,6 +35,8 @@ export async function loadPlugins(client: Client): Promise<Map<string, PluginCom
         continue;
       }
 
+      loadedPlugins.push(plugin);
+
       // コマンド登録
       for (const cmd of plugin.commands ?? []) {
         commands.set(cmd.data.name, cmd);
@@ -57,6 +61,11 @@ export async function loadPlugins(client: Client): Promise<Map<string, PluginCom
       console.error(`[plugin-loader] ${entry} の読み込みに失敗:`, err);
     }
   }
+
+  // チャンネル自動作成（clientReady 後に実行）
+  client.once("clientReady", async () => {
+    await setupPluginChannels(client, loadedPlugins);
+  });
 
   return commands;
 }

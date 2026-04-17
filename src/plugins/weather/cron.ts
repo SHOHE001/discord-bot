@@ -1,20 +1,22 @@
 import { EmbedBuilder, TextChannel } from "discord.js";
 import type { Client } from "discord.js";
 import { fetchWeather, iconUrl, embedColor } from "./api.js";
+import { getPluginChannelId } from "../../core/channel-manager.js";
 
 export async function postDailyWeather(client: Client): Promise<void> {
-  const channelId = process.env.WEATHER_CHANNEL_ID;
+  // channel-manager で自動作成されたチャンネルを優先、なければ env var にフォールバック
+  const channelId = getPluginChannelId("weather") ?? process.env.WEATHER_CHANNEL_ID;
   const city = process.env.CITY ?? "Tokyo";
 
   if (!channelId) {
-    console.warn("[weather/cron] WEATHER_CHANNEL_ID が設定されていません");
+    console.warn("[weather/cron] 投稿先チャンネルが見つかりません（WEATHER_CHANNEL_ID も未設定）");
     return;
   }
 
   try {
     const channel = await client.channels.fetch(channelId);
     if (!(channel instanceof TextChannel)) {
-      console.warn("[weather/cron] WEATHER_CHANNEL_ID がテキストチャンネルではありません");
+      console.warn("[weather/cron] 投稿先がテキストチャンネルではありません");
       return;
     }
 

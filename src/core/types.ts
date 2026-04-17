@@ -18,6 +18,7 @@ export interface PluginCronJob {
 
 export interface PluginDefinition {
   name: string;
+  channelName?: string;            // 自動作成するチャンネル名（省略可）
   commands?: PluginCommand[];
   cronJobs?: PluginCronJob[];
   onReady?: (client: Client) => Promise<void>;
