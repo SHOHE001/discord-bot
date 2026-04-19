@@ -37,17 +37,25 @@ async function saveState(state: StateMap): Promise<void> {
 }
 
 function buildEmbed(source: FeedSource, items: FeedItem[], totalNew: number): EmbedBuilder {
-  const lines = items.map((item) => {
+  let description = "";
+  for (const item of items) {
     const date = item.pubDate ? ` _(${formatDate(item.pubDate)})_` : "";
     const safeTitle = item.title.replace(/[[\]()]/g, "\\$&");
-    const snippet = item.snippet ? `\n${item.snippet}` : "";
-    return `• **[${safeTitle}](${item.link})**${date}${snippet}`;
-  });
+    const safeSnippet = item.snippet
+      ? `\n${item.snippet.replace(/[[\]()]/g, "\\$&")}`
+      : "";
+    const line = `• **[${safeTitle}](${item.link})**${date}${safeSnippet}\n\n`;
+    if ((description + line).length > EMBED_DESCRIPTION_LIMIT - 50) {
+      description += "...(以下略)";
+      break;
+    }
+    description += line;
+  }
 
   const embed = new EmbedBuilder()
     .setTitle(`📰 ${source.label}`)
     .setURL(source.url)
-    .setDescription(lines.join("\n\n").slice(0, EMBED_DESCRIPTION_LIMIT))
+    .setDescription(description.trim() || "(新着なし)")
     .setColor(0x2b8cee);
 
   if (totalNew > items.length) {
@@ -58,7 +66,7 @@ function buildEmbed(source: FeedSource, items: FeedItem[], totalNew: number): Em
 
 function formatDate(iso: string): string {
   const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
+  if (Number.isNaN(d.getTime())) return "日時不明";
   return d.toLocaleString("ja-JP", { timeZone: "Asia/Tokyo", hour12: false });
 }
 
@@ -86,9 +94,10 @@ export async function checkRssFeeds(client: Client): Promise<void> {
     })
   );
 
-  for (const result of results) {
+  for (let i = 0; i < results.length; i++) {
+    const result = results[i];
     if (result.status === "rejected") {
-      console.error("[rss-news] フィード取得失敗:", result.reason);
+      console.error(`[rss-news] ${FEEDS[i].label} フィード取得失敗:`, result.reason);
       continue;
     }
 
@@ -99,7 +108,7 @@ export async function checkRssFeeds(client: Client): Promise<void> {
     }
 
     const prev = state[source.url];
-    const allIds = items.map((i) => i.id).filter(Boolean);
+    const allIds = Array.from(new Set(items.map((i) => i.id).filter(Boolean)));
 
     if (!prev) {
       console.log(`[rss-news] ${source.label}: 初回のため通知スキップ（${allIds.length}件を記録）`);
@@ -118,14 +127,17 @@ export async function checkRssFeeds(client: Client): Promise<void> {
       continue;
     }
 
-    const mergedIds = Array.from(new Set([...allIds, ...prev.seenIds])).slice(0, MAX_SEEN_IDS);
-    nextState[source.url] = { seenIds: mergedIds, lastUpdated: now };
-
     const embed = buildEmbed(source, newItems.slice(0, MAX_ITEMS_PER_FEED), newItems.length);
-    await channel.send({ embeds: [embed] }).catch((err: unknown) => {
+    const sent = await channel.send({ embeds: [embed] }).catch((err: unknown) => {
       console.error(`[rss-news] ${source.label} Discord送信失敗:`, err);
+      return null;
     });
-    console.log(`[rss-news] ${source.label}: ${newItems.length}件通知`);
+
+    if (sent) {
+      const mergedIds = Array.from(new Set([...allIds, ...prev.seenIds])).slice(0, MAX_SEEN_IDS);
+      nextState[source.url] = { seenIds: mergedIds, lastUpdated: now };
+      console.log(`[rss-news] ${source.label}: ${newItems.length}件通知`);
+    }
   }
 
   await saveState(nextState).catch((err: unknown) => {
