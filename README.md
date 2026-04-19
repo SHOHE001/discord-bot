@@ -16,6 +16,8 @@ discord.js v14 + TypeScript 製。
 | プラグイン | コマンド | 定期実行 |
 |-----------|---------|---------|
 | weather | `/weather [city]` | 毎朝7:00 JST に天気を自動投稿 |
+| manga-update | - | 毎日 8:00/20:00 JST にワンパンマン更新を通知 |
+| rss-news | - | 毎日 8:00/20:00 JST にRSSニュース新着を通知（NHK主要/社会/政治/経済/国際、ITmedia IT/AI、Publickey） |
 
 ---
 
