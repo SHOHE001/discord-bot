@@ -18,9 +18,11 @@ export async function fetchWeather(city: string): Promise<WeatherData> {
   const res = await fetch(url);
 
   if (!res.ok) {
+    // TODO: エラーログを介した機密情報（APIキー等）漏洩の可能性を防ぐための対応を行ってください。
     throw new Error(`天気情報の取得に失敗しました: ${city} (${res.status})`);
   }
 
+  // TODO: 外部APIレスポンスの安全でない逆シリアル化/型変換（`as` キャスト）が行われています。ランタイムでの型バリデーションを追加してください。
   const data = (await res.json()) as {
     name: string;
     main: { temp: number; feels_like: number; humidity: number };
@@ -52,3 +54,7 @@ export function embedColor(icon: string): number {
   if (icon.startsWith("13")) return 0xdff8eb; // 雪: 白
   return 0x4895ef;
 }
+
+// TODO: `iconUrl` 純粋関数のテストを追加してください。
+// TODO: `fetchWeather` API呼び出しの成功時のテストを追加してください。
+// TODO: `fetchWeather` におけるエラー処理のテストを追加してください。

@@ -9,6 +9,7 @@ import { setupPluginChannels } from "./channel-manager.js";
 export async function loadPlugins(client: Client): Promise<Map<string, PluginCommand>> {
   const commands = new Map<string, PluginCommand>();
   const loadedPlugins: PluginDefinition[] = [];
+  // TODO: プラグインディレクトリのパスがハードコードされています。`import.meta.url` を使用して動的にパスを解決するように変更してください。
   const pluginsDir = resolve(process.cwd(), "src/plugins");
 
   let entries: string[];
