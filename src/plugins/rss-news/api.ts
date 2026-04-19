@@ -22,7 +22,7 @@ export async function fetchFeed(url: string): Promise<FeedItem[]> {
     return {
       id: String(id),
       title: (item.title ?? "(no title)").trim(),
-      link: item.link ?? "",
+      link: /^https?:\/\//i.test(item.link ?? "") ? (item.link ?? "") : "",
       pubDate: item.isoDate ?? item.pubDate,
       snippet: (item.contentSnippet ?? "").trim().slice(0, 200),
     };

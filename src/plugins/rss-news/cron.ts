@@ -7,8 +7,9 @@ import { fetchFeed, type FeedItem } from "./api.js";
 
 const DATA_DIR = resolve(process.cwd(), "data");
 const STATE_FILE_PATH = resolve(DATA_DIR, "rss-news.json");
-const MAX_SEEN_IDS = 200;
+const MAX_SEEN_IDS = 500;
 const MAX_ITEMS_PER_FEED = 5;
+const EMBED_DESCRIPTION_LIMIT = 4000;
 
 interface FeedState {
   seenIds: string[];
@@ -21,29 +22,32 @@ async function loadState(): Promise<StateMap> {
   try {
     const raw = await fs.readFile(STATE_FILE_PATH, "utf-8");
     return JSON.parse(raw) as StateMap;
-  } catch (err: any) {
-    if (err.code === "ENOENT") return {};
-    console.error("[rss-news] 状態ファイルの読み込みに失敗:", err);
-    throw err;
+  } catch (err: unknown) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return {};
+    console.error("[rss-news] 状態ファイルの読み込みに失敗。空で続行します:", err);
+    return {};
   }
 }
 
 async function saveState(state: StateMap): Promise<void> {
   await fs.mkdir(DATA_DIR, { recursive: true });
-  await fs.writeFile(STATE_FILE_PATH, JSON.stringify(state, null, 2), "utf-8");
+  const tmpPath = `${STATE_FILE_PATH}.tmp`;
+  await fs.writeFile(tmpPath, JSON.stringify(state, null, 2), "utf-8");
+  await fs.rename(tmpPath, STATE_FILE_PATH);
 }
 
 function buildEmbed(source: FeedSource, items: FeedItem[], totalNew: number): EmbedBuilder {
   const lines = items.map((item) => {
     const date = item.pubDate ? ` _(${formatDate(item.pubDate)})_` : "";
+    const safeTitle = item.title.replace(/[[\]()]/g, "\\$&");
     const snippet = item.snippet ? `\n${item.snippet}` : "";
-    return `• **[${item.title}](${item.link})**${date}${snippet}`;
+    return `• **[${safeTitle}](${item.link})**${date}${snippet}`;
   });
 
   const embed = new EmbedBuilder()
     .setTitle(`📰 ${source.label}`)
     .setURL(source.url)
-    .setDescription(lines.join("\n\n").slice(0, 4000))
+    .setDescription(lines.join("\n\n").slice(0, EMBED_DESCRIPTION_LIMIT))
     .setColor(0x2b8cee);
 
   if (totalNew > items.length) {
@@ -75,49 +79,56 @@ export async function checkRssFeeds(client: Client): Promise<void> {
   const nextState: StateMap = { ...state };
   const now = new Date().toISOString();
 
-  for (const source of FEEDS) {
-    try {
+  const results = await Promise.allSettled(
+    FEEDS.map(async (source) => {
       const items = await fetchFeed(source.url);
-      if (items.length === 0) {
-        console.log(`[rss-news] ${source.label}: アイテムなし`);
-        continue;
-      }
+      return { source, items };
+    })
+  );
 
-      const prev = state[source.url];
-      const allIds = items.map((i) => i.id).filter(Boolean);
-
-      if (!prev) {
-        console.log(`[rss-news] ${source.label}: 初回のため通知スキップ（${allIds.length}件を記録）`);
-        nextState[source.url] = {
-          seenIds: allIds.slice(0, MAX_SEEN_IDS),
-          lastUpdated: now,
-        };
-        continue;
-      }
-
-      const seen = new Set(prev.seenIds);
-      const newItems = items.filter((item) => item.id && !seen.has(item.id));
-
-      if (newItems.length === 0) {
-        console.log(`[rss-news] ${source.label}: 新着なし`);
-        continue;
-      }
-
-      const embed = buildEmbed(source, newItems.slice(0, MAX_ITEMS_PER_FEED), newItems.length);
-      await channel.send({ embeds: [embed] });
-      console.log(`[rss-news] ${source.label}: ${newItems.length}件通知`);
-
-      const mergedIds = [...allIds, ...prev.seenIds];
-      const uniqueIds = Array.from(new Set(mergedIds)).slice(0, MAX_SEEN_IDS);
-      nextState[source.url] = { seenIds: uniqueIds, lastUpdated: now };
-    } catch (err) {
-      console.error(`[rss-news] ${source.label} (${source.url}) の処理に失敗:`, err);
+  for (const result of results) {
+    if (result.status === "rejected") {
+      console.error("[rss-news] フィード取得失敗:", result.reason);
+      continue;
     }
+
+    const { source, items } = result.value;
+    if (items.length === 0) {
+      console.log(`[rss-news] ${source.label}: アイテムなし`);
+      continue;
+    }
+
+    const prev = state[source.url];
+    const allIds = items.map((i) => i.id).filter(Boolean);
+
+    if (!prev) {
+      console.log(`[rss-news] ${source.label}: 初回のため通知スキップ（${allIds.length}件を記録）`);
+      nextState[source.url] = {
+        seenIds: allIds.slice(0, MAX_SEEN_IDS),
+        lastUpdated: now,
+      };
+      continue;
+    }
+
+    const seen = new Set(prev.seenIds);
+    const newItems = items.filter((item) => item.id && !seen.has(item.id));
+
+    if (newItems.length === 0) {
+      console.log(`[rss-news] ${source.label}: 新着なし`);
+      continue;
+    }
+
+    const mergedIds = Array.from(new Set([...allIds, ...prev.seenIds])).slice(0, MAX_SEEN_IDS);
+    nextState[source.url] = { seenIds: mergedIds, lastUpdated: now };
+
+    const embed = buildEmbed(source, newItems.slice(0, MAX_ITEMS_PER_FEED), newItems.length);
+    await channel.send({ embeds: [embed] }).catch((err: unknown) => {
+      console.error(`[rss-news] ${source.label} Discord送信失敗:`, err);
+    });
+    console.log(`[rss-news] ${source.label}: ${newItems.length}件通知`);
   }
 
-  try {
-    await saveState(nextState);
-  } catch (err) {
+  await saveState(nextState).catch((err: unknown) => {
     console.error("[rss-news] 状態ファイルの保存に失敗:", err);
-  }
+  });
 }
