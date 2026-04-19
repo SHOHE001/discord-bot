@@ -46,7 +46,11 @@ function buildEmbed(source: FeedSource, items: FeedItem[], totalNew: number): Em
       : "";
     const line = `• **[${safeTitle}](${item.link})**${date}${safeSnippet}\n\n`;
     if ((description + line).length > EMBED_DESCRIPTION_LIMIT - 50) {
-      description += "...(以下略)";
+      if (description === "") {
+        description = line.slice(0, EMBED_DESCRIPTION_LIMIT - 50) + "...(以下略)";
+      } else {
+        description += "...(以下略)";
+      }
       break;
     }
     description += line;
@@ -108,7 +112,7 @@ export async function checkRssFeeds(client: Client): Promise<void> {
     }
 
     const prev = state[source.url];
-    const allIds = Array.from(new Set(items.map((i) => i.id).filter(Boolean)));
+    const allIds = Array.from(new Set(items.map((item) => item.id).filter((id): id is string => Boolean(id))));
 
     if (!prev) {
       console.log(`[rss-news] ${source.label}: 初回のため通知スキップ（${allIds.length}件を記録）`);
