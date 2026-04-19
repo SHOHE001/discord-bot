@@ -14,7 +14,7 @@ export const weatherCommand: PluginCommand = {
     ),
 
   async execute(interaction) {
-    const city = interaction.options.getString("city") ?? DEFAULT_CITY;
+    const city = interaction.options.getString("city")?.trim() || DEFAULT_CITY;
 
     await interaction.deferReply();
 
