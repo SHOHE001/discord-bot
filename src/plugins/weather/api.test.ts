@@ -1,6 +1,6 @@
-import test, { describe, it } from "node:test";
+import { describe, it } from "node:test";
 import assert from "node:assert";
-import { embedColor } from "./api.ts";
+import { embedColor } from "./api";
 
 describe("weather api: embedColor", () => {
   it("should return yellow for clear sky (01)", () => {
