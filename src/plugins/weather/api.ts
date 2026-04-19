@@ -14,11 +14,11 @@ export async function fetchWeather(city: string): Promise<WeatherData> {
   const apiKey = process.env.OWM_API_KEY;
   if (!apiKey) throw new Error("OWM_API_KEY が設定されていません");
 
+  // TODO: エラーログを介した機密情報（APIキー等）漏洩の可能性を防ぐための対応を行ってください。
   const url = `${OWM_BASE}?q=${encodeURIComponent(city)}&appid=${apiKey}&units=metric&lang=ja`;
   const res = await fetch(url);
 
   if (!res.ok) {
-    // TODO: エラーログを介した機密情報（APIキー等）漏洩の可能性を防ぐための対応を行ってください。
     throw new Error(`天気情報の取得に失敗しました: ${city} (${res.status})`);
   }
 
