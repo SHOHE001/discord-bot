@@ -138,7 +138,7 @@ export async function checkRssFeeds(client: Client): Promise<void> {
     });
 
     if (sent) {
-      const mergedIds = Array.from(new Set([...allIds, ...prev.seenIds])).slice(0, MAX_SEEN_IDS);
+      const mergedIds = Array.from(new Set([...allIds, ...prev.seenIds])).slice(0, Math.max(MAX_SEEN_IDS, allIds.length));
       nextState[source.url] = { seenIds: mergedIds, lastUpdated: now };
       console.log(`[rss-news] ${source.label}: ${newItems.length}件通知`);
     }
