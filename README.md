@@ -13,11 +13,12 @@ discord.js v14 + TypeScript 製。
 
 ## 機能一覧
 
-| プラグイン | コマンド | 定期実行 |
-|-----------|---------|---------|
-| weather | `/weather [city]` | 毎朝7:00 JST に天気を自動投稿 |
-| manga-update | - | 毎日 8:00/20:00 JST にワンパンマン更新を通知 |
-| rss-news | - | 毎日 8:00/20:00 JST にRSSニュース新着を通知（NHK主要/社会/政治/経済/国際、ITmedia IT/AI、Publickey） |
+| プラグイン | コマンド | 定期実行 | チャンネル |
+|-----------|---------|---------|-----------|
+| weather | `/weather [city]` | 毎朝7:00 JST に天気を自動投稿 | #天気 |
+| manga-update | - | 毎日 8:00/20:00 JST にワンパンマン更新を通知 | #manga-update |
+| rss-news | - | 毎日 8:00/20:00 JST にRSSニュース新着を通知（NHK/ITmedia/Publickey） | #rss-news |
+| tsubuyaki | - | - | #つぶやき（メッセージ投稿 → Notionへ自動保存）|
 
 ---
 
@@ -45,6 +46,10 @@ cp .env.example .env
 | `OWM_API_KEY` | OpenWeatherMap APIキー | openweathermap.org → My API Keys |
 | `WEATHER_CHANNEL_ID` | 天気を自動投稿するチャンネルID | チャンネルを右クリック → チャンネルIDをコピー |
 | `CITY` | デフォルト都市（例: Tokyo） | 任意 |
+| `NOTION_TOKEN` | Notion インテグレーションシークレット | [notion.so/my-integrations](https://www.notion.so/my-integrations) |
+| `NOTION_TSUBUYAKI_DB_ID` | つぶやき保存先のNotion DB ID | Notionデータベース URL から取得 |
+
+> **Notionの初期設定**: インテグレーション作成後、保存先データベースのページを開き「…」→「コネクト」からインテグレーションを接続すること。
 
 > **注意**: `DISCORD_GUILD_ID` を設定するとスラッシュコマンドが即時反映される（開発推奨）。未設定の場合はグローバル登録（最大1時間かかる）。
 
@@ -208,6 +213,7 @@ interface PluginDefinition {
   commands?: PluginCommand[];      // スラッシュコマンド（任意）
   cronJobs?: PluginCronJob[];      // 定期実行タスク（任意）
   onReady?: (client: Client) => Promise<void>;  // 起動時フック（任意）
+  onMessage?: (message: Message) => Promise<void>;  // メッセージ受信フック（任意）
 }
 
 interface PluginCommand {
