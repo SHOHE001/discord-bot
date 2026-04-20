@@ -115,7 +115,21 @@ export async function checkRssFeeds(client: Client): Promise<void> {
     const allIds = Array.from(new Set(items.map((item) => item.id).filter((id): id is string => Boolean(id))));
 
     if (!prev) {
-      console.log(`[rss-news] ${source.label}: 初回のため通知スキップ（${allIds.length}件を記録）`);
+      const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000);
+      const recentItems = items.filter((item) => {
+        if (!item.pubDate) return false;
+        const d = new Date(item.pubDate);
+        return !Number.isNaN(d.getTime()) && d > twelveHoursAgo;
+      });
+      if (recentItems.length > 0) {
+        const embed = buildEmbed(source, recentItems.slice(0, MAX_ITEMS_PER_FEED), recentItems.length);
+        await channel.send({ embeds: [embed] }).catch((err: unknown) => {
+          console.error(`[rss-news] ${source.label} Discord送信失敗:`, err);
+        });
+        console.log(`[rss-news] ${source.label}: 初回、直近${recentItems.length}件を通知`);
+      } else {
+        console.log(`[rss-news] ${source.label}: 初回のため通知スキップ（${allIds.length}件を記録）`);
+      }
       nextState[source.url] = {
         seenIds: allIds.slice(0, MAX_SEEN_IDS),
         lastUpdated: now,
