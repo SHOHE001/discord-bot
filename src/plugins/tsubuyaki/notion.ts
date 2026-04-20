@@ -21,7 +21,7 @@ export async function saveMemo(
       parent: { database_id: NOTION_DB_ID },
       properties: {
         メモ: { title: [{ text: { content: title } }] },
-        内容: { rich_text: [{ text: { content } }] },
+        内容: { rich_text: [{ text: { content: content.slice(0, 2000) } }] },
         日時: { date: { start: timestamp.toISOString() } },
         "Discord URL": { url: discordUrl },
       },

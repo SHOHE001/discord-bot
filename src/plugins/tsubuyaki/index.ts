@@ -7,7 +7,7 @@ const plugin: PluginDefinition = {
   channelName: "つぶやき",
 
   onMessage: async (message) => {
-    if (message.author.bot) return;
+    if (message.author.bot || !message.content) return;
 
     const channelId = getPluginChannelId("tsubuyaki");
     if (message.channelId !== channelId) return;
