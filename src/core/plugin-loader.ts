@@ -56,6 +56,11 @@ export async function loadPlugins(client: Client): Promise<Map<string, PluginCom
         client.once("clientReady", () => void plugin.onReady!(client));
       }
 
+      // メッセージハンドラ
+      if (plugin.onMessage) {
+        client.on("messageCreate", (message) => void plugin.onMessage!(message));
+      }
+
       console.log(`[plugin-loader] ✓ ${plugin.name} 読み込み完了`);
     } catch (err) {
       console.error(`[plugin-loader] ${entry} の読み込みに失敗:`, err);

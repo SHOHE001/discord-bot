@@ -1,6 +1,7 @@
 import type {
   Client,
   ChatInputCommandInteraction,
+  Message,
   SlashCommandBuilder,
   SlashCommandOptionsOnlyBuilder,
 } from "discord.js";
@@ -22,4 +23,5 @@ export interface PluginDefinition {
   commands?: PluginCommand[];
   cronJobs?: PluginCronJob[];
   onReady?: (client: Client) => Promise<void>;
+  onMessage?: (message: Message) => Promise<void>;
 }
