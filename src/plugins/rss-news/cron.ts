@@ -10,6 +10,7 @@ const STATE_FILE_PATH = resolve(DATA_DIR, "rss-news.json");
 const MAX_SEEN_IDS = 500;
 const MAX_ITEMS_PER_FEED = 5;
 const EMBED_DESCRIPTION_LIMIT = 4000;
+const INITIAL_NOTIFY_WINDOW_MS = 12 * 60 * 60 * 1000; // 12時間（cronの実行間隔と同じ）
 
 interface FeedState {
   seenIds: string[];
@@ -115,21 +116,27 @@ export async function checkRssFeeds(client: Client): Promise<void> {
     const allIds = Array.from(new Set(items.map((item) => item.id).filter((id): id is string => Boolean(id))));
 
     if (!prev) {
-      const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000);
+      const cutoff = new Date(Date.parse(now) - INITIAL_NOTIFY_WINDOW_MS);
       const recentItems = items.filter((item) => {
         if (!item.pubDate) return false;
         const d = new Date(item.pubDate);
-        return !Number.isNaN(d.getTime()) && d > twelveHoursAgo;
+        return !Number.isNaN(d.getTime()) && d > cutoff;
       });
+      let sent = true;
       if (recentItems.length > 0) {
         const embed = buildEmbed(source, recentItems.slice(0, MAX_ITEMS_PER_FEED), recentItems.length);
-        await channel.send({ embeds: [embed] }).catch((err: unknown) => {
+        const result = await channel.send({ embeds: [embed] }).catch((err: unknown) => {
           console.error(`[rss-news] ${source.label} Discord送信失敗:`, err);
+          return null;
         });
-        console.log(`[rss-news] ${source.label}: 初回、直近${recentItems.length}件を通知`);
+        sent = !!result;
+        if (sent) {
+          console.log(`[rss-news] ${source.label}: 初回、直近${recentItems.length}件を通知`);
+        }
       } else {
         console.log(`[rss-news] ${source.label}: 初回のため通知スキップ（${allIds.length}件を記録）`);
       }
+      if (!sent) continue;
       nextState[source.url] = {
         seenIds: allIds.slice(0, MAX_SEEN_IDS),
         lastUpdated: now,
