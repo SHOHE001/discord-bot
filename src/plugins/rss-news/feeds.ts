@@ -11,5 +11,4 @@ export const FEEDS: FeedSource[] = [
   { label: "国際", url: "https://www.nhk.or.jp/rss/news/cat6.xml" },
   { label: "IT", url: "https://rss.itmedia.co.jp/rss/2.0/news_bursts.xml" },
   { label: "AI", url: "https://rss.itmedia.co.jp/rss/2.0/aiplus.xml" },
-  { label: "技術ブログ", url: "https://www.publickey1.jp/atom.xml" },
 ];
