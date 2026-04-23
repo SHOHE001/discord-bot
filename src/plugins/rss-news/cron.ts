@@ -2,7 +2,7 @@ import { promises as fs } from "node:fs";
 import { resolve } from "node:path";
 import { Client, EmbedBuilder, TextChannel } from "discord.js";
 import { getPluginChannelId } from "../../core/channel-manager.js";
-import { FEEDS, type FeedSource } from "./feeds.js";
+import { AUTO_FEEDS as FEEDS, type FeedSource } from "./feeds.js";
 import { fetchFeed, type FeedItem } from "./api.js";
 
 const DATA_DIR = resolve(process.cwd(), "data");
