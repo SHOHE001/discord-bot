@@ -3,6 +3,7 @@ import type { Client } from "discord.js";
 import { fetchWeather, iconUrl, embedColor } from "./api.js";
 import { getPluginChannelId } from "../../core/channel-manager.js";
 
+// TODO: `postDailyWeather` cronジョブのテストを追加してください。
 export async function postDailyWeather(client: Client): Promise<void> {
   // channel-manager で自動作成されたチャンネルを優先、なければ env var にフォールバック
   const channelId = getPluginChannelId("weather") ?? process.env.WEATHER_CHANNEL_ID;
@@ -22,6 +23,7 @@ export async function postDailyWeather(client: Client): Promise<void> {
 
     const w = await fetchWeather(city);
 
+    // TODO: 天気予報のDiscord埋め込みロジックを重複して使用しています。共通の関数に切り出してください。
     const embed = new EmbedBuilder()
       .setColor(embedColor(w.icon))
       .setTitle(`🌤️ 今日の天気 - ${w.cityName}`)

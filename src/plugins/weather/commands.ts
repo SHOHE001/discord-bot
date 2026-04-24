@@ -21,6 +21,7 @@ export const weatherCommand: PluginCommand = {
     try {
       const w = await fetchWeather(city);
 
+      // TODO: 天気予報のDiscord埋め込みロジックを重複して使用しています。共通の関数に切り出してください。
       const embed = new EmbedBuilder()
         .setColor(embedColor(w.icon))
         .setTitle(`${w.cityName} の天気`)
